@@ -1,0 +1,74 @@
+<html>
+<script>
+function init(){
+	BFINPUT.value = uug.getBaseFoler();;
+//////////////////////////////
+	var pwidth = uug.getItem("pWidth");
+	var pheight = uug.getItem("pHeight");
+	var selected = getOptStr(pwidth,pheight);
+	
+	var rxml = new String( uug.getItem("reso") );
+	var rlist = rxml.split(/<reso>/);
+	var opts = "";
+	for( var n=1; n < rlist.length; ++n ){
+		var item = rlist[ n ];
+		var width = item.split(/<width>/)[1].split(/</)[0];
+		var height = item.split(/<height>/)[1].split(/</)[0];
+		var optstr = getOptStr(width,height);
+		if( optstr==selected){
+			opts = opts + "<option selected='yes'>" + optstr + "</option>";
+		}else{
+			opts = opts + "<option>" + optstr + "</option>";
+		}
+	}
+	RLIST.innerHTML = opts;
+/////////////////////////////////	
+	IPLIST.innerHTML = uug.getIPAddressList();
+}
+function onResoChange(){
+	var sinx = RLIST.selectedIndex;
+	var width = RLIST.options[sinx].value.split("x")[0];
+	var height = RLIST.options[sinx].value.split("x")[1];
+	uug.setItem("pWidth", width);
+	uug.setItem("pHeight", height);
+	alert( RLIST.options[sinx].value );
+}
+function getOptStr(w,h){
+	return w + "x" + h;
+}
+
+function setBaseFolder() {
+	uug.setBaseFolder( BFINPUT.value );
+}
+
+function editSrc(){
+	uug.goPage("edit.html");
+}
+function setshelf(){
+	uug.goPage("setshelf.html");
+}
+</script>
+
+<body onload="init()">
+<h1>help</h1>
+preview resolution <select id="RLIST" onChange="onResoChange()"></select> 	
+<br/>	
+Base Folder 
+<input type="text" id="BFINPUT" size="64" /><button onClick="setBaseFolder()" > set </button><br/>
+<div id="IPLIST"></div><br/>
+<button onclick="editSrc()">edit</button>
+<button onclick="setshelf()">setshelf</button>
+<pre>
+BaseFolder 本棚ディレクトリ
+FolderName 書名ディレクトリ
+reso　カメラ解像度
+pWidth　HTMLプレビュー幅 
+pHeight HTMLプレビュー高さ
+getCurrentFolder()+"/"+":LastView"	最終閲覧ファイル名
+ソースファイル名 ページプロパティ
+#scale　HTMLビューズーム率
+
+Shelves 本棚ディレクトリ登録　<shelves><shelf><name/><dir/></shelf></shelves>
+</pre>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<html>
+<header>
+<script>
+var sxml = {
+	tag2val: function ( tag, str ){
+		if( str===undefined )
+			return "";
+		var tags = str.split("<"+tag+">");
+		if( tags.length < 2 ){
+			return "";
+		}
+		var its = tags[1].split("</"+tag+">");
+		if(its.length < 2 ){
+			return "";
+		}
+		return its[0].replace(/&gt;/gm,'>').replace(/&lt;/gm,'<').replace(/&amp;/gm,'&');
+	},
+	val2tag: function( tag, value ){
+		if( value==undefined || value==null ){
+			return "<"+tag+"></"+tag+">";
+		}
+		if( !value.replace ){
+			return "<"+tag+">"+value+"</"+tag+">";
+		}
+		value = value.replace(/&/gm,'&amp;');
+		value = value.replace(/</gm,'&lt;');
+		value = value.replace(/>/gm,'&gt;');
+		return "<"+tag+">"+value+"</"+tag+">";
+	}
+};
+var shelves;
+var ShelveStr;
+
+function goBack(){
+	uug.goPage('start.html');
+}
+
+function init(){
+	DOCNAME.innerText = uug.getItem("FolderName");
+	BOOKDIR.innerText = uug.getBaseFoler();
+
+	var props = uug.getPropertyList().split(/<item>/);
+	var prophtml = "";
+	for( var n=1; n< props.length; ++n ){
+		var file = sxml.tag2val("title", props[n]).split(/:/)[1];
+		var text = sxml.tag2val("text", props[n]);
+		if( text!="" ){
+			prophtml = prophtml + "<div onClick='uug.goViewer(\""+file+"\")'>" + text + "</div>";
+		}
+	}
+	PropsBox.innerHTML = prophtml
+
+
+	shelves = new Array();
+	ShelveStr = uug.getItem("Shelves");
+	var shelfitems = ShelveStr.split(/<shelf>/);
+	var liststr = "";
+	for( var n=1; n< shelfitems.length; ++n ){
+		var bname = getValueOfXml("name",shelfitems[n]);
+		var bpath = getValueOfXml("dir",shelfitems[n]);
+		var num = shelves.push(xmllineStr(bname, bpath)) - 1;
+		liststr = liststr + displineStr(bname, bpath, num);
+	}
+	if( liststr=="" ){
+		liststr = displineStr( "book0", uug.getBaseFoler()+uug.getItem("FolderName") );
+		ShelveStr = xmllineStr( "book0", uug.getBaseFoler()+uug.getItem("FolderName") );
+	}
+	ShelvesBox.innerHTML = liststr+"</table>";
+}
+
+function displineStr(name, dir, num){
+	var p = dir.lastIndexOf('/');
+	return "<div class='BookMark'>"+
+				"<table width='100%'><tr>"+
+					"<td width='90%'>"+
+						"<div onclick=\"setShelf('"+dir+"')\">"+
+							"<span class='BookTitle'>"+name+"</span><br/>"+
+							"<span class='BookDir'>"+dir.substr(0,p)+"</span>"+
+						"</div>"+
+					"</td>"+
+				"<td><button onclick=rmbm("+num+")>del</button></td></tr></table>"+
+		"</div>";
+}
+function xmllineStr(name,dir){
+	return "<shelf><name>"+name+"</name><dir>"+dir+"</dir></shelf>";
+}
+
+function getValueOfXml( key, str ){
+	var items = str.split("<"+key+">");
+	if( items.length > 1 ){
+		return items[1].split("</")[0];
+	}
+	return "";
+}
+function setShelf(current){
+	uug.startPage(current);
+}
+
+function addShelf(){
+	var shelfstr = xmllineStr( uug.getItem("FolderName"), uug.getBaseFoler()+uug.getItem("FolderName") )+ uug.getItem("Shelves");
+	uug.setItem("Shelves",shelfstr); 
+	init();
+}
+function rmbm(delnum){
+	if( window.confirm("Delete '"+getValueOfXml("name",shelves[delnum])+"'?" ) ){
+		var ShelveStr = "";
+		for( var n=0; n < shelves.length; ++n ){
+			if( n!=delnum ) {
+				ShelveStr = ShelveStr + shelves[n];
+			}
+		}
+		uug.setItem("Shelves", ShelveStr);
+		init();
+	}
+	return false;
+}
+</script>
+<style>
+#TopMenu {
+		z-index:10000;
+		position: fixed;
+		top:0;
+		width:100%;
+		padding:0;
+		background-color:yellow;
+}
+body {
+		margin:0;
+		padding:0;
+}
+.BookMark {
+	background-color: lightblue;
+	margin:4px;
+	-webkit-border-radius: 6px;
+	border: 2px;
+}
+.BookTitle {
+	font-size: x-large;
+	font-weight: bold;
+}
+.BookDir {
+	font-size:small;
+	margin-left:8px;
+}
+#PropsBox {
+	margin:10px;
+}
+#DOCNAME {
+}
+#BOOKDIR {
+}
+</style>
+
+</header>
+<body onload="init()">
+<div id="TopMenu">
+	<table width='100%'>
+		<tr>
+			<td><button onClick="uug.goPage('start.html')"> x </button> Bookmark</td>
+		</tr>
+	</table>
+</div>
+<br/><br>
+
+<table width='100%'><tr>
+	<td width='90%'>
+		<span id="DOCNAME" class="BookTitle"/></span><br/>
+		<span id="BOOKDIR" class="BookDir"></span>
+	</td>
+	<td><button onclick="addShelf()">add</button></td>
+</tr>
+</table>
+<br/>
+<div id="PropsBox"></div>
+<br/>
+<div id="ShelvesBox"></div>
+<br/><br/>
+
+</body>
+</html>

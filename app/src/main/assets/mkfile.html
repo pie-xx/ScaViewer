@@ -1,0 +1,79 @@
+<html>
+<style>
+img {margin:0;}
+.thum { float: left; border:3px solid white; width: 100%;}
+.thum2 { float: left; border:3px solid red; width: 100%;}
+.index { font-size: 24pt; }
+.cap { font-size:8pt; }
+#slider { width:"100%"; background-color:lightblue; 
+	margin:0; padding:0;}
+#scur {position:absolute; border:4px solid red; height:16px; margin:0;}
+hr {background-color: #99cc00;}
+</style>
+<script>
+var ThumLimit = 20;
+var mLstart;
+var plist;
+var plistxml;
+
+function init() {
+	mkThumlist();
+}
+
+function mkThumlist(){
+	BOOKTITLE.innerHTML = uug.getItem("FolderName");
+	plistxml = new String(uug.getPicList());
+	plist = plistxml.split(/<file><name>/);
+
+	var limit = ThumLimit;
+	var phtml= "<html><body>";
+	for( var n=1; n < plist.length; ++n ){
+		phtml = phtml + mkthum( n );
+	}
+	uug.putFile('index.html',phtml+"</body></html>");
+
+	piclist.innerHTML = 'Done.';
+}
+
+function mkthum( num ){
+	var item = plist[num];
+
+	if( item != undefined ){
+		var pic = item.split(/</)[0];
+		var onfocus = item.indexOf("<cur>yes</cur>")!=-1;
+	
+		var dc = "thum";
+		if( onfocus ){
+			dc = "thum2";
+		}
+		var ats = item.split(/<text>/);
+		var atext = "<div id='cap"+num+"' ><b>"+uug.getCaption(pic)+"</b></div>";
+		for( var n=1; n < ats.length; ++n ){
+			atext = atext + ats[n].split(/</)[0];
+		} 
+		return "<div id='box"+num+"' class='"+dc+"'><img height='120' src='"+pic+"' align='left'/>"+
+			atext+"<br clear='all'/>"+
+			"<span class='cap'>"+pic+"</span></div>";
+	}
+}
+
+function goStart(){
+	uug.goPage('start.html');
+}
+</script>
+
+<body onload="init()" >
+<div id="CURLOC"></div>
+<span id="BOOKTITLE"></span>
+<br/>
+
+<div id="piclist"></div><br clear='all'/>
+
+<div class='thum'></div>
+<br clear='all'/>
+
+<br clear="all"/>
+<br clear="all"/>
+<button onClick='goStart()'>start</button>
+</body>
+</html>

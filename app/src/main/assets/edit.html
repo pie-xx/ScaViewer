@@ -1,0 +1,32 @@
+<html>
+<style>
+textarea {width:100%;};
+</style>
+<script>
+var srcname = "start.html";
+function saveSrc(){
+	uug.setItem(srcname,TEXTEDIT.value);
+	uug.saveDBtoFile(srcname);
+}
+function clearSrc(){
+	alert("clear");
+	uug.clearItem(srcname);
+}
+function loadSrc() {
+	TEXTEDIT.value = uug.getItem(srcname);
+}
+</script>
+<body onload="loadSrc()">
+<table width="100%">
+<tr>
+<td>
+<button onclick="clearSrc()">clear</button> <button onclick="loadSrc()">load</button>
+</td>
+<td align="right">
+<button onclick="saveSrc()">send</button>
+</td>
+</tr>
+</table>
+<textarea id="TEXTEDIT" rows="40"></textarea>
+</body>
+</html>

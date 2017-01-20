@@ -1,0 +1,182 @@
+<html>
+<style>
+img {margin:0;}
+.thum { float: left; border:3px solid white; }
+.thum2 { float: left; border:3px solid red;}
+.index { font-size: 24pt; }
+.cap { font-size:8pt; }
+#slider { width:"100%"; background-color:lightblue; 
+	margin:0; padding:0;}
+#scur {position:absolute; border:4px solid red; height:16px; margin:0;}
+hr {background-color: #99cc00;}
+</style>
+<script>
+var ThumLimit = 50;
+var mLstart;
+var plist;
+
+function init() {
+	var p = Math.floor(uug.getLastPicno() / ThumLimit );
+	mLstart = p * ThumLimit;
+	if( mLstart < 0 ){
+		mLstart = 0;
+	}
+	mkThumlist();
+
+}
+
+function mkThumlist(){
+	BOOKTITLE.innerHTML = uug.getItem("FolderName");
+	var plistxml = new String(uug.getPicList());
+	plist = plistxml.split(/<file><name>/);
+	var phtml= "";
+
+	var limit = ThumLimit;
+	var picDom = document.getElementById("piclist");
+	picDom.innerHTML = "";
+	for( var n=Number(mLstart)+1; n < plist.length; ++n ){
+		var item = plist[n];
+		if( item != undefined ){
+			var elem = document.createElement('div');
+			elem.innerHTML = mkthum(item);
+			picDom.appendChild(elem);
+		}
+		if( --limit < 1 )
+			break;
+	}
+
+	CURPOS.innerHTML = mLstart+"/"+plist.length;
+	scur.style.left = (110 + (200 * mLstart )/plist.length)+"px";
+
+
+	var dlist = plistxml.split(/<folder><name>/);
+	var dhtml = "";
+	for( n=1; n < dlist.length; ++n ){
+		item = dlist[n];
+		if( item.charAt(0)!="." ){
+			var foldername = item.split(/<\//)[0];
+			dhtml = dhtml +"<b onclick='goBook()'>"+ foldername + "</b><br/>";
+		}
+	}
+	FOLDERS.innerHTML = dhtml;
+
+}
+
+
+
+function mkthum( item ){
+	var pic = item.split(/</)[0];
+	var onfocus = item.indexOf("<cur>yes</cur>")!=-1;
+
+	var dc = "thum";
+	if( onfocus ){
+		dc = "thum2";
+	}
+	var img = uug.getThum(pic);
+	if( img=="error" ){
+		return"<div class='"+dc+"'><br/>"+
+			"<span class='cap'>"+pic+"</span><br/></div>";
+	}
+
+	var ats = item.split(/<text>/);
+	var atext = "";
+	for( var n=1; n < ats.length; ++n ){
+		atext = atext + ats[n].split(/</)[0];
+	} 
+	if( atext != "" ){
+		return "<br clear='all'/><div class='"+dc+"'><img height='120' src='"+img+"' onClick='uug.goViewer(\""+pic+"\")' align='left'/>"+
+		"<span class='cap'>"+pic+"</span><br/>"+atext+"<br/></div><br clear='all'/>";
+	}else{
+		return "<div class='"+dc+"'><a height='120' onClick='uug.goViewer(\""+pic+"\")'>.</a></div>";
+	}
+}
+
+function goViewer( pic ){
+	uug.goViewer(pic);
+}
+function beforeList(){
+	mLstart = Number(mLstart) - ThumLimit;
+	if(mLstart < 0 )
+		mLstart = 0;
+	uug.setItem('Lstart', mLstart);
+	mkThumlist();
+}
+function forwardList(){
+	mLstart = Number(mLstart) + ThumLimit;
+	if(mLstart > plist.length )
+		mLstart = plist.length - ThumLimit;
+	uug.setItem('Lstart', mLstart);
+	mkThumlist();
+}
+function jumpList( p ) {
+	uug.setItem('Lstart', p*ThumLimit);
+	mkThumlist();
+}
+function slideChg(){
+	alert("slideChg()");
+}
+
+function cusorMove(e){
+	scur.style.left = e.clientX;
+	var pos = new Number(e.clientX);
+	pos = Math.round((( pos - 120 )/200)*plist.length);
+	
+	mLstart = pos ;
+	mkThumlist();
+}
+
+function goParent(){
+	var current = new String(uug.getBaseFoler());
+	if(current.substr(current.length-1)=='/'){
+		current = current.substr(0,current.length-1);
+	}
+	var p = current.lastIndexOf('/');
+	if( p!=-1 ){
+		uug.setBaseFoler( current.substring(0,p) );
+		uug.setItem("FolderName",current.substring(p+1));
+		init();
+	}
+}
+
+function goBook(){
+	var current = new String(uug.getBaseFoler());
+	if(current.substr(current.length-1)=='/'){
+		current = current.substr(0,current.length-1);
+	}
+	var bookname = event.target.innerHTML;
+	
+	uug.setBaseFoler( current+"/"+uug.getItem("FolderName") );
+	uug.setItem("FolderName", bookname);
+	init();
+}
+</script>
+
+<body onload="init()">
+<button onClick="goParent()">&lt;&lt;</button>
+<span id="BOOKTITLE"></span>
+<button onClick="uug.goPage('help.html')">Help</button>
+<button onClick="uug.goPage('setshelf.html')">BookMark</button>
+<br/>
+
+<div id="piclist"></div><br clear='all'/>
+
+<div class='thum'></div>
+<br clear='all'/>
+
+<!--////Slider///////////////////////////////////////////-->
+<table width="100%">
+<tr>
+<td width="50"><div id="CURPOS">0</div></td>
+<td width="50" align="right"><button onclick='beforeList()'>←</button></td>
+<td id="slider" width="200" onMouseDown="cusorMove(event)"><div id="scur"> </div></td>
+<td><button onclick='forwardList()'>→</button></td>
+</tr>
+</table>
+
+<!--////FOLDER LIST//////////////////////////////////////-->
+<div id="FOLDERS"></div>
+<br clear="all"/>
+<br clear="all"/>
+<button onClick='uug.goCamera()'>Camera</button>
+</body>
+</html>

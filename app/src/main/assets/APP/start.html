@@ -1,0 +1,275 @@
+<html>
+<style>
+	img {margin:0;}
+	.thum { float: left; border:3px solid white; width: 100%;}
+	.thum2 { float: left; border:3px solid red; width: 100%;}
+	.index { font-size: 24pt; }
+	.cap { font-size:8pt; }
+	.slider { margin:0; padding:0; width:20px;}
+	#scur {position:absolute; border:4px solid red; height:16px; margin:0;}
+	hr {background-color: #99cc00;}
+	body {
+	margin:0;
+	padding:0;
+	}
+	#TopMenu {
+	z-index:10000;
+	position: fixed;
+	top:0;
+	width:100%;
+	padding:0;
+	background-color:lightgreen;
+	}
+</style>
+<script>
+var ThumLimit = 8;
+var mLstart;
+var plist;
+var plistxml;
+
+function goBack(){
+	goParent();
+}
+
+function init() {
+	ThumLimit = Number(uug.getItem("ThumLimit"));
+	if(ThumLimit==""){
+		ThumLimit = 10;
+	}
+	plistxml = new String(uug.loadBook());
+	var p = Math.floor(uug.getLastPicno() / ThumLimit );
+	mLstart = p * ThumLimit;
+	if( mLstart < 0 ){
+		mLstart = 0;
+	}
+	mkThumlist();
+	initSlider();
+	mkBookList();
+}
+
+function initSlider(){
+	SLIDER.style.width = Math.floor(window.innerWidth * 0.5 );
+	SLIDER.min = 0;
+	SLIDER.max = plist.length - 2;
+	SLIDER.value = parseInt(uug.getLastPicno());
+	SLIDER.addEventListener("change",
+			function(){
+				mLstart = SLIDER.value;
+				uug.setItem('Lstart', mLstart);
+				mkThumlist();
+			},false);
+};
+
+function mkThumlist(){
+	BOOKTITLE.innerHTML = uug.getItem("FolderName");
+	plist = plistxml.split(/<file><name>/);
+
+	var limit = ThumLimit;
+	var phtml= "";
+	for( var n=Number(mLstart)+1; n < plist.length; ++n ){
+		phtml = phtml + mkthum( n );
+		if( --limit < 1 )
+			break;
+	}
+	piclist.innerHTML = phtml;
+
+	var lv = plist.length / 5;
+	var cno = Math.floor( mLstart / lv +0.5);
+	if(cno > 4){
+		cno = 4;
+	}
+
+////////////////Slider
+	var dLstart = Number(mLstart)+1;
+	CURPOS.innerHTML = dLstart+"/"+(plist.length-1);
+}
+
+function mkBookList(){
+	var dlist = plistxml.split(/<folder><name>/);
+	var dhtml = "";
+	for( n=1; n < dlist.length; ++n ){
+		item = dlist[n];
+		if( item.charAt(0)!="." ){
+			var foldername = item.split(/<\//)[0];
+			dhtml = dhtml +"<b onclick='goBook()'>"+ foldername + "</b><br/>";
+		}
+	}
+	FOLDERS.innerHTML = dhtml;
+}
+
+
+
+function mkthum( num ){
+	var item = plist[num];
+
+	if( item != undefined ){
+		var pic = item.split(/</)[0];
+		var onfocus = item.indexOf("<cur>yes</cur>")!=-1;
+	
+		var dc = "thum";
+		if( onfocus ){
+			dc = "thum2";
+		}
+		var img = uug.getThum(pic);
+		if( img=="error" ){
+			return "<div id='box"+num+"' class='"+dc+"' onclick='viewFile(\""+pic+"\")'>"+pic+"</div>";
+		}
+		if( pic.indexOf(".mp4") != -1 ){
+			return "<div id='box"+num+"' class='"+dc+"'>"+
+				"<img width='320' src='"+img+"' onClick='viewFile(\""+pic+"\")' align='left'/>"+
+				"<button onclick='delFile("+num+")'>del "+num+"</button>"+
+				"<span class='cap'>"+pic+"</span>"+
+				"<button onclick='addCap("+num+")'>cap</button>"+
+				"<br><div id='cap"+num+"' >"+uug.getCaption(pic)+"</div>"+
+				"</div>";
+		}
+		var ats = item.split(/<text>/);
+		var atext = "";
+		for( var n=1; n < ats.length; ++n ){
+			atext = atext + ats[n].split(/</)[0];
+		} 
+		return "<div id='box"+num+"' class='"+dc+"'>"+
+			"<img width='320' src='"+img+"' onClick='uug.goViewer(\""+pic+"\")' align='left'/>"+
+			atext+"<br clear='all'/>"+
+			"<button onclick='delFile("+num+")'>del "+num+"</button>"+
+			"<span class='cap'>"+pic+"</span>"+
+			"<button onclick='getExif("+num+")'>exif</button>"+
+			"<button onclick='addCap("+num+")'>cap</button>"+
+			"<br><div id='cap"+num+"' >"+uug.getCaption(pic)+"</div>"+
+			"</div>";
+	}
+}
+function viewFile( file ){
+	uug.intentFileView(uug.getBaseFoler()+uug.getItem("FolderName")+"/"+file);
+}
+
+function delFile(num){
+	var fname = plist[num].split(/</)[0];
+	if( confirm( "Delete '"+fname+"' ?" ) ){
+	//キャプション消去
+		uug.rmFile( fname );
+		uug.setCaption(fname,"");
+		init();
+	}
+}
+
+function addCap(num){
+	var fname = plist[num].split(/</)[0];
+	var cap = prompt("Caption", uug.getCaption(fname));
+	if( cap != null ){
+		uug.setCaption(fname,cap);
+		document.getElementById("cap"+num).innerHTML = cap;
+	}
+}
+
+function getExif(num){
+	var fname = plist[num].split(/</)[0];
+	alert( uug.getExif(fname) );
+}
+
+function goViewer( pic ){
+	uug.goViewer(pic);
+}
+function beforeList(){
+	mLstart = Number(mLstart) - ThumLimit;
+	if(mLstart < 0 ){
+		mLstart = 0;
+	}
+	SLIDER.value = mLstart;
+
+	uug.setItem('Lstart', mLstart);
+	mkThumlist();
+}
+function forwardList(){
+	mLstart = Number(mLstart) + ThumLimit;
+	if(mLstart >= plist.length-1 ){
+		mLstart = plist.length - ThumLimit - 1;
+	}
+	SLIDER.value = mLstart;
+
+	uug.setItem('Lstart', mLstart);
+	mkThumlist();
+}
+
+function goParent(){
+	var current = new String(uug.getBaseFoler());
+	if(current.substr(current.length-1)=='/'){
+		current = current.substr(0,current.length-1);
+	}
+	var p = current.lastIndexOf('/');
+	if( p!=-1 ){
+		var newdir = current.substring(0,p);
+		if( newdir=="" ){
+			newdir = "/";
+		}
+		uug.saveBook();
+		uug.setBaseFoler( newdir );
+		uug.setItem("FolderName",current.substring(p+1));
+		init();
+	}
+}
+
+function goBook(){
+	var current = new String(uug.getBaseFoler());
+	if(current.substr(current.length-1)=='/'){
+		current = current.substr(0,current.length-1);
+	}
+	var bookname = event.target.innerHTML;
+	
+	uug.saveBook();
+	uug.setBaseFoler( current+"/"+uug.getItem("FolderName") );
+	uug.setItem("FolderName", bookname);
+	init();
+}
+
+function mkBook() {
+	var newname = window.prompt("新しいFolder名を入力してください");
+	if(newname != "" && newname != null){
+		uug.makeFolder(newname);
+		plistxml = new String(uug.getPicList());
+		mkBookList();
+	}
+}
+
+function slider(num){
+	mLstart = Math.floor(plist.length / 5)*num;
+	uug.setItem('Lstart', mLstart);
+	mkThumlist();
+}
+</script>
+
+<body onload="init()" >
+<div id="TopMenu">
+	<table width='100%'>
+		<tr><td><button onClick="goParent()">&lt;&lt;</button>  <span id="BOOKTITLE"></span></td>
+			<td align='right'>
+				<button onClick="uug.goPage('setting.html')">✱</button>
+				<button onClick="uug.goPage('bookmarks.html')">☆</button>
+			</td>
+		</tr></table>
+</div>
+
+<br/>
+<br/>
+<br/>
+<div style="margin:8px;">
+	<div id="piclist"></div><br clear='all'/>
+
+	<div class='thum'></div>
+	<br clear='all'/>
+	<!--////////////////Slider -->
+	<span id="CURPOS"></span>
+	<button onclick='beforeList()'>←</button>
+	<input id="SLIDER" type="range" />
+	<button onclick='forwardList()'>→</button></td>
+	<!-- Slider ////////////////-->
+
+	<div id="FOLDERS"></div>
+	<br clear="all"/>
+	<br clear="all"/>
+	<button onClick='uug.goCamera()'>Camera</button>
+	<button onClick='mkBook()'>New Folder</button>
+	<br/>
+</div>
+</body>
+</html>

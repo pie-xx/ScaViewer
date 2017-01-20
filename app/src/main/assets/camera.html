@@ -1,0 +1,435 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>camera</title>
+<style>
+.thum {float:left;}
+</style>
+<script>
+var nc=0;
+var inInterval = null;
+var PreviewBtn;
+var ThumCur=0;
+
+var mLstart = location.search.split(/p=/)[1];
+var mTotal;
+
+var mImage = new Image();
+var mCanvas;
+var mContext;
+var mNombreImg = new Image();
+var mNombreCanvas;
+var mNombreContext;
+var mThumCanvas;
+var mThumContext;
+var mThumImg = new Image();
+
+var mThumWidth;
+var mThumHeight;
+
+var mFselect;
+
+var mPicList = new Array();
+var mLastPic = "";
+
+var cH = 40;
+var cW = 256;
+var pWidth;
+var pHeight;
+
+function init(){
+	mFselect = document.getElementById("Fselect");
+	mFselect.onchange = function(e){
+		var si = mFselect.selectedIndex;
+		setPic(mFselect.options[si].value);
+	};
+
+	PreviewBtn= document.getElementById('startbtn');
+	mCanvas =  document.getElementById('pvimg');
+	mContext = mCanvas.getContext('2d');
+
+	mNombreCanvas =  document.getElementById('nombreimg');
+	mNombreContext = mNombreCanvas.getContext('2d');
+
+	mThumCanvas = document.getElementById('CapThum');
+	mThumContext = mThumCanvas.getContext('2d');
+
+	mThumCanvas.addEventListener("touchstart", startCloseUp, false);
+	mThumCanvas.addEventListener("touchmove", moveCloseUp, false);
+	mThumCanvas.addEventListener("touchend", endCloseUp, false);
+	mThumCanvas.addEventListener("touchleave", endCloseUp, false);
+	mThumCanvas.addEventListener("touchcancel", endCloseUp, false);
+
+	mThumCanvas.addEventListener("mousedown", startCloseUp, false);
+	mThumCanvas.addEventListener("mousemove", moveCloseUp, false);
+	mThumCanvas.addEventListener("mouseup", endCloseUp, false);
+	mThumCanvas.addEventListener("mouseout", endCloseUp, false);
+
+
+	CURDIR.innerText = 
+	PostIt('/cmd/curdir','',function(d){
+		var curdirs = d.responseText.split(/<curdir>/);
+		if(curdirs.length>1){
+			CURDIR.innerHTML = curdirs[1].split(/<\/curdir>/)[0];
+		}
+		getlist();
+	});
+}
+
+var mMoveCloseup = false;
+
+function startCloseUp(event) {
+	if( event.type == 'mousedown' ){
+		nombreX.value = (event.offsetX / mThumWidth) * mNombreImg.width - (nombreW.value/2);
+		nombreY.value = (event.offsetY / mThumHeight) * mNombreImg.height - (nombreH.value/2);
+		viewNonbre();
+		mMoveCloseup = true;
+	}else
+	if( event.type == 'touchstart' ){
+		nombreX.value = (event.touches[0].offsetX / mThumWidth) * mNombreImg.width - (nombreW.value/2);
+		nombreY.value = (event.touches[0].offsetY / mThumHeight) * mNombreImg.height - (nombreH.value/2);
+		viewNonbre();
+		mMoveCloseup = true;
+	}
+}
+function moveCloseUp(event) {
+	if(	mMoveCloseup == true ){
+		if( event.type == 'mousemove' ){
+			nombreX.value = (event.offsetX / mThumWidth) * mNombreImg.width - (nombreW.value/2);
+			nombreY.value = (event.offsetY / mThumHeight) * mNombreImg.height - (nombreH.value/2);
+			viewNonbre();
+		}else
+		if( event.type == 'touchstart' ){
+			nombreX.value = (event.touches[0].offsetX / mThumWidth) * mNombreImg.width - (nombreW.value/2);
+			nombreY.value = (event.touches[0].offsetY / mThumHeight) * mNombreImg.height - (nombreH.value/2);
+			viewNonbre();
+		}
+	}
+}
+function endCloseUp(event){
+	mMoveCloseup = false;
+}
+var plist;
+function mkIndex(){
+	var phtml="";
+	for( var n=0; n < mTotal/5 ; ++n ){
+		var dinx = n+1;
+		phtml = phtml + "<a onclick='jumpList("+n+")' class='index'>"+dinx+"</a> ";
+	}
+	return phtml;
+}
+
+function beforeList(){
+	mLstart = mLstart - 5;
+	if(mLstart < 0){
+		mLstart = 0;
+	}
+	location.href='camera.html?p='+mLstart;
+}
+
+function forwardList(){
+	mLstart = mLstart + 5;
+	if(mTotal < mLstart ){
+		mLstart = mTotal - 5;
+	}
+	location.href='camera.html?p='+mLstart;
+}
+
+function jumpList( p ) {
+	location.href='camera.html?p='+ p*5;
+}
+
+function mkthum( pic ){
+	mNombreImg.onload =  function() { viewNonbre(); };
+	mNombreImg.src = '/cmd/getpic?p='+pic;
+
+	mThumImg.onload = function() {
+		dispThum();
+		dispCloseupArea();
+	};
+	mThumImg.src = '/cmd/getthum?p='+pic;
+}
+
+function dispThum(){
+	mThumHeight = mThumCanvas.height;
+	mThumWidth = mThumCanvas.width * mThumCanvas.height / mThumImg.height;
+
+	mThumContext.clearRect(0,0,mThumCanvas.width,mThumCanvas.height);
+	mThumContext.drawImage( mThumImg,
+			0, 0, mThumImg.width, mThumImg.height,
+			0, 0, mThumWidth, mThumHeight );
+	nombresize.innerText = mNombreImg.width + " x " +mNombreImg.height;
+}
+
+function dispCloseupArea(){
+	var nombreLeft = nombreX.value * (mThumWidth / mNombreImg.width ) ;
+	var nombreTop = (nombreY.value * mThumHeight) / mNombreImg.height ;
+	var nombreWidth = nombreW.value * (mThumWidth / mNombreImg.width );
+	var nombreHeight = (nombreH.value  * mThumCanvas.height)/ mNombreImg.height;
+
+	mThumContext.beginPath();
+	mThumContext.strokeStyle = 'rgba(0, 128, 0, 0.5)';
+	mThumContext.moveTo(nombreLeft, nombreTop);
+	mThumContext.lineTo(nombreLeft+nombreWidth, nombreTop);
+	mThumContext.lineTo(nombreLeft+nombreWidth, nombreTop+nombreHeight);
+	mThumContext.lineTo(nombreLeft, nombreTop+nombreHeight);
+	mThumContext.lineTo(nombreLeft, nombreTop);
+
+	mThumContext.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+	mThumContext.moveTo(nombreLeft+1, nombreTop+1);
+	mThumContext.lineTo(nombreLeft+nombreWidth-1, nombreTop+1);
+	mThumContext.lineTo(nombreLeft+nombreWidth-1, nombreTop+nombreHeight-1);
+	mThumContext.lineTo(nombreLeft+1, nombreTop+nombreHeight-1);
+	mThumContext.lineTo(nombreLeft+1, nombreTop+1);
+
+	mThumContext.closePath();
+	mThumContext.stroke();
+}
+
+function viewNonbre(){
+	mNombreContext.clearRect(0,0,mNombreCanvas.width,mNombreCanvas.height);
+	mNombreContext.drawImage( mNombreImg,
+		nombreX.value, nombreY.value, nombreW.value, nombreH.value,
+		0,0, mNombreCanvas.width, mNombreCanvas.height );
+	nombresize.innerText = mNombreImg.width + " x " +mNombreImg.height;
+
+	dispThum();
+	dispCloseupArea();
+}
+mNombreImg.onload = function(){
+}
+
+function startCap(){
+	if(inInterval==null){
+		inInterval = setInterval("preview()", 500);
+		PreviewBtn.innerHTML = "<span style='color:red;'>stop</span>";
+	}else{
+		clearInterval(inInterval);
+		inInterval = null;
+		PreviewBtn.innerHTML = "start";
+	}
+}
+
+var inPreview = null;
+function startPreview(){
+	if(inPreview==null){
+		PreviewBtn.innerHTML = "<span style='color:red;'>stop</span>";
+		loopreview();
+	}else{
+		stopPreview();
+	}
+}
+
+function stopPreview(){
+	clearTimeout(inPreview);
+	inPreview = null;
+	PreviewBtn.innerHTML = "start";
+}
+
+function cap() {
+	document.getElementById("LastCap").innerHTML="Capturing...";
+
+	PostIt('/cmd/cap','',
+		function(d){
+			setPic( d.responseText );
+		},
+		function(d){
+			capfname.innerHTML = d.responseText ;
+			LastCap.href="";
+			LastCap.innerHTML="LastCap";
+		}
+		);
+}
+
+function setPic( pic ) {
+	mkthum( pic );
+	LastCap.href="/cmd/getpic?p="+pic;
+	LastCap.innerHTML="LastCap";
+}
+
+
+mImage.onload = function() {
+	Wsize.innerText = window.innerWidth + "/" + window.innerHeight;
+	if( window.innerWidth < window.innerHeight ){
+		pWidth = window.innerWidth;
+		pHeight = (pWidth * 3)/4;
+		mCanvas.style.cssFloat = "none";
+	}else{
+		pHeight =  window.innerHeight - 160;
+		pWidth = (pHeight * 4)/3;
+		mCanvas.style.cssFloat = "left";
+	}
+	mCanvas.width = pWidth;
+	mCanvas.height = pHeight;
+
+	mContext.drawImage( mImage, 0, 0, pWidth, pHeight );
+	nc=nc+1;
+	
+	mContext.beginPath();
+	mContext.moveTo(pWidth/2, 0);
+	mContext.lineTo(pWidth/2, pHeight);
+	mContext.moveTo(0,pHeight/8);
+	mContext.lineTo(pWidth,pHeight/8);
+	mContext.closePath();
+	mContext.strokeStyle = 'rgba(0, 128, 0, 0.5)';
+	mContext.stroke();
+}
+function preview() {
+	mImage.src = "/cmd/preview?nc="+nc;;
+}
+
+function loopreview() {
+	preview();
+	inPreview = setTimeout("loopreview()", 100);
+}
+function PostIt( url, data, func, errfunc ){
+	var xhr = new XMLHttpRequest();
+	xhr.onreadystatechange = function(){
+		if(xhr.readyState==4){
+			if(xhr.status==200){
+				if( func != null )
+					func(xhr);
+			}else{
+				if( errfunc != null )
+					errfunc(xhr);
+				stopPreview();
+			}
+		}
+	}
+	xhr.open('POST',url);
+	xhr.send(data);
+}
+function flushon(){
+	PostIt('/cmd/flushon','','');
+}
+function flushoff(){
+	PostIt('/cmd/flushoff','','');
+}
+function afocus(){
+	PostIt('/cmd/focus','','');
+}
+
+function startChgBox(){
+	CURDIR.style.display="none";
+	INPUTCURDIR.value = CURDIR.innerText;
+	CDBOX.style.display="block";	
+}
+function changeDir(){
+	PostIt('/cmd/chgdir',"p="+INPUTCURDIR.value,
+		function(e){
+			CURDIR.style.display="block";
+			CURDIR.innerText = INPUTCURDIR.value;
+			CDBOX.style.display="none";	
+			init();
+		},
+		function(e){
+			if(window.confirm('make dir?') ){
+				PostIt('/cmd/mkdir',"p="+INPUTCURDIR.value,
+					function(e){
+						CURDIR.style.display="block";
+						CURDIR.innerText = INPUTCURDIR.value;
+						CDBOX.style.display="none";	
+						init();
+					}
+				);
+			}
+		}
+	);
+}
+
+function getlist(){
+	PostIt('/cmd/list',"",
+		function(e){
+			while (mFselect.childNodes.length > 0) {
+				mFselect.removeChild(mFselect.firstChild)
+			}
+			mPicList = new Array();
+			var flist = e.responseText.split(/<name>/);
+			for( var n=1; n < flist.length; ++n ){
+				var fname = flist[n].split(/<\/name>/)[0];
+				var opt = document.createElement("option");
+				opt.value = fname;
+				opt.text = fname;
+				mFselect.appendChild(opt);
+				mLastPic = fname;
+			}
+			mFselect.selectedIndex = mFselect.options.length - 1;
+			nombresize.innerText = mLastPic;
+			setPic(mLastPic);
+		},
+		function(e){
+			alert("err "+e.responseText);
+		}
+	);
+
+}
+
+function beforePage(){
+	if( mFselect.selectedIndex > 0 ) {
+		mFselect.selectedIndex = mFselect.selectedIndex - 1;
+		var si = mFselect.selectedIndex;
+		setPic(mFselect.options[si].value);
+	}
+}
+function nextPage(){
+	if( mFselect.selectedIndex < mFselect.options.length - 1 ) {
+		mFselect.selectedIndex = mFselect.selectedIndex + 1;
+		var si = mFselect.selectedIndex;
+		setPic(mFselect.options[si].value);
+	}
+}
+</script>
+</head>
+<body onload="init()">
+<table>
+<tr>
+<td>
+	<button id="startbtn" onClick="startPreview()">start</button>
+	<button onClick="preview()">preview</button>
+</td>
+<td>
+	<div id="Wsize">1.16</div>
+	<div id="CURDIR" onClick="startChgBox()">current dir</div>
+	<div id="CDBOX" style="display:none;">
+	<input id="INPUTCURDIR" size="32" /><button onClick="changeDir()">change book</button>
+	</div>
+</td>
+</tr>
+</table>
+<span id="FCount"></span>
+<br/>
+<table>
+<tr>
+<td>
+<canvas id="pvimg" onClick="afocus()"></canvas>
+</td>
+<td>
+<div>
+	<a id="LastCap" href="" target="_new">LastCap</a><br/>
+	<div id="capfname"><canvas hspace='4' vspace='8' height='240' width='480' id='CapThum'></canvas></div><br/>
+	<div id="nombresize"></div>
+	<button onClick="cap()" width="100%">Cap</button>
+</div>
+
+<br/>
+	<table>
+		<tr><td></td><td>x <input id="nombreX" value="0" size=4/> </td><td></td></tr>
+		<tr><td>y <input id="nombreY" value="0" size=4/></td><td><canvas id="nombreimg" width=320 height=320></canvas></td>
+			<td>↑<br/>height <input id="nombreH" value="320" size=4/><br/>↓</td></tr>
+		<tr><td></td><td>← width <input id="nombreW" value="320" size=4/> →</td><td></td></tr>
+	</table>
+	<br/>
+	<select id="Fselect"></select>
+	<button onclick="getlist()">list</button>
+	<button onclick="viewNonbre()">nombre</button>
+	<button onclick="beforePage()">←</button>
+	<button onclick="nextPage()">→</button>
+ <br/>
+
+<img id="capimg"/>
+</td>
+</tr>
+</table>
+<button onClick="cap()" style="width=:100pt;">Cap</button>
+</body>
+</html>

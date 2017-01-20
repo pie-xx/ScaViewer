@@ -1,0 +1,129 @@
+<html>
+<script>
+function goBack(){
+	uug.goPage('start.html');
+}
+
+function init(){
+	
+	var ipliststr = uug.getIPAddressList();
+	var iplist = ipliststr.split('<item>');
+	var lstr="";
+	for( var n = 1; n < iplist.length; ++n ){
+		var net = iplist[n].split('<net>')[1].split('</net>')[0];
+		var ip = iplist[n].split('<ip>')[1].split('</ip>')[0];
+		lstr = lstr + "<button onclick=\"dispIP('"+ip+"')\">"+net+": "+ip+"</button></br>";
+		dispIP(ip);
+	}
+	PropList.innerText = uug.getPropertyList();
+	IPlist.innerHTML = lstr;
+
+	ThumLimitBox.innerHTML = uug.getItem("ThumLimit");
+	BrightnessBox.innerHTML = uug.getItem("Brightness");
+	ContrastBox.innerHTML = uug.getItem("Contrast");
+	PropSaveDirBox.innerHTML = uug.getPropSaveDir();
+}
+function dispIP(ip){
+	var url = "http://"+ip+":8600/page/camera.html";
+	var img=uug.getQRcode(url);
+	QRimg.src = img;
+	CurIP.innerText = url;
+}
+
+function setThumLimit(){
+	var ThumLimit =uug.getItem("ThumLimit");
+	var cap = prompt("ThumLimit", ThumLimit);
+	if( cap != null ){
+		uug.setItem("ThumLimit",cap);
+		ThumLimitBox.innerHTML = cap;
+	}
+}
+
+function setContrast(){
+	var Contrast =uug.getItem("Contrast");
+	var cap = prompt("Contrast", Contrast);
+	if( cap != null ){
+		uug.setItem("Contrast",cap);
+		ContrastBox.innerHTML = cap;
+	}
+}
+
+function setBrightness(){
+	var Brightness =uug.getItem("Brightness");
+	var cap = prompt("Brightness", Brightness);
+	if( cap != null ){
+		uug.setItem("Brightness",cap);
+		BrightnessBox.innerHTML = cap;
+	}
+}
+
+function setPropSaveDir(){
+	var PropSaveDir =uug.getPropSaveDir();
+	var cap = prompt("PropSaveDir", PropSaveDir);
+	if( cap != null ){
+		uug.putPropSaveDir(cp);
+		PropSaveDirBox.innerHTML = cap;
+	}
+}
+
+</script>
+<style>
+	#TopMenu {
+	z-index:10000;
+	position: fixed;
+	top:0;
+	width:100%;
+	padding:0;
+	background-color:yellow;
+	}
+
+	body {
+	margin:0;
+	padding:0;
+	}
+</style>
+<body onload="init()">
+<div id="TopMenu">
+	<table width='100%'>
+		<tr>
+			<td><button onClick="uug.goPage('start.html')"> x </button> Setting</td>
+		</tr>
+	</table>
+</div>
+
+<div style="margin-left:1em;margin-top:2em;">
+
+	<div onclick="setThumLimit()">
+		<h3>ThumLimit</h3>
+		<div id="ThumLimitBox"></div>
+	</div>
+	<p/>
+	<div onclick="setPropSaveDir()">
+		<h3>PropSaveDir</h3>
+		<div id="PropSaveDirBox"></div>
+	</div>
+	<p/>
+
+	<h3>Network</h3>
+
+	<div id="CurIP"></div>
+	<div id="IPlist"></div>
+
+	<img id="QRimg"/>
+	<br/>
+
+	<div onclick="setContrast()">
+		<h3>Contrast</h3>
+		<div id="ContrastBox"></div>
+	</div>
+	<p/>
+	<div onclick="setBrightness()">
+		<h3>Brightness</h3>
+		<div id="BrightnessBox"></div>
+	</div>
+	<p/>
+
+	<div id="PropList"></div>
+</div>
+</body>
+</html>
